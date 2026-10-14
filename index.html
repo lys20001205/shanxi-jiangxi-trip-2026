@@ -4,67 +4,90 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <meta name="theme-color" content="#f7f8f7">
-  <meta name="description" content="2026年11月27日至12月6日梧州出发，两人前往山西大同、太原与江西婺源、三清山的交通与摄影计划。">
-  <meta property="og:title" content="山西 / 江西 · 双人旅行计划 2026">
-  <meta property="og:description" content="10天9晚，太原、大同、婺源与三清山；去程航班，其余为高铁、动车及汽车。">
+  <meta name="description" content="2026年11月27日至12月6日双人旅行。景点池自主选择自然与人文景观，按日期、路线和交通时间自动排程。">
+  <meta property="og:title" content="山西 / 江西 · 行程规划器 2026">
+  <meta property="og:description" content="从梧州出发；勾选景点，自动生成山西与江西的10天铁路优先行程。">
   <meta name="color-scheme" content="light">
   <link rel="manifest" href="./manifest.webmanifest">
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./style.css?v=2">
-  <title>山西 / 江西 · 2026 双人旅行计划</title>
-  <script defer src="./data.js?v=2"></script>
-  <script defer src="./app.js?v=2"></script>
+  <link rel="stylesheet" href="./style.css?v=4">
+  <title>山西 / 江西 · 2026 行程规划器</title>
+  <script defer src="./data.js?v=4"></script>
+  <script defer src="./planner_data.js?v=4"></script>
+  <script defer src="./app.js?v=4"></script>
+  <script defer src="./planner.js?v=4"></script>
 </head>
 <body>
   <header class="topbar">
     <div class="shell topinner">
       <a class="wordmark" href="#top">山西 / 江西 <span>旅行计划 · 2026</span></a>
-      <nav class="nav-main" aria-label="页面导航"><a href="#route">路线</a><a href="#schedule">日程</a><a href="#places">景点照片</a><a href="#food">餐饮</a><a href="#budget">预算</a><a href="#checklist">待办</a></nav>
+      <nav class="nav-main" aria-label="页面导航"><a href="#planner">规划</a><a href="#route">路线</a><a href="#schedule">日程</a><a href="#places">景点池</a><a href="#food">餐饮</a><a href="#budget">预算</a><a href="#checklist">待办</a></nav>
       <div class="header-actions"><button id="copyLink" class="button minimal small" type="button">复制链接</button><button id="exportCalendar" class="button minimal small" type="button">日历</button></div>
     </div>
-    <nav class="mobile-nav" aria-label="移动版导航"><a href="#route">路线</a><a href="#schedule">日程</a><a href="#places">景点照片</a><a href="#food">餐饮</a><a href="#budget">预算</a><a href="#checklist">待办</a></nav>
+    <nav class="mobile-nav" aria-label="移动版导航"><a href="#planner">规划</a><a href="#route">路线</a><a href="#schedule">日程</a><a href="#places">景点池</a><a href="#food">餐饮</a><a href="#budget">预算</a><a href="#checklist">待办</a></nav>
   </header>
   <main id="top">
     <div class="shell hero">
       <div class="hero-copy">
-        <div class="eyebrow">行程版本 2.0 <span class="dot"></span> 2026年11月27日—12月6日</div>
-        <h1>山西 / 江西<br>双人旅行计划</h1>
-        <p>梧州出发。山西游太原、大同，江西游婺源、三清山。景德镇暂不安排。</p>
+        <div class="eyebrow">行程规划器 3.0 <span class="dot"></span> 2026年11月27日—12月6日</div>
+        <h1>山西 / 江西<br>行程规划</h1>
+        <p>景点由你选择；自动按出行日期、交通方向和游览时长生成行程。</p>
         <div class="metadata"><span>2人</span><span>10天9晚</span><span>12月6日返回梧州</span></div>
-        <div class="hero-actions"><a class="button primary" href="#schedule">查看日程 <span>↗</span></a><a class="button minimal" href="#places">查看景点照片</a></div>
+        <div class="hero-actions"><a class="button primary" href="#planner">选择景点 <span>↗</span></a><a class="button minimal" href="#schedule">查看计算结果</a></div>
         <p class="muted" id="countdown" aria-live="polite">出发倒计时计算中</p>
       </div>
       <div id="heroPhotos" class="hero-photos" aria-label="景点实景照片"></div>
     </div>
     <div class="shell facts">
-      <div><span>首段交通</span><strong>广州 → 太原航班</strong></div>
-      <div><span>之后交通</span><strong>高铁 / 汽车，无中途航班</strong></div>
-      <div><span>核心古迹</span><strong>云冈 · 悬空寺 · 木塔</strong></div>
-      <div><span>核心自然景观</span><strong>石城红枫 · 三清山</strong></div>
+      <div><span>路线模式</span><strong id="factRouteMode">自动计算中</strong></div>
+      <div><span>途中交通</span><strong>高铁 / 汽车，不坐中途航班</strong></div>
+      <div><span>已排入</span><strong id="factSelected">—</strong></div>
+      <div><span>自然景观</span><strong id="factNature">—</strong></div>
     </div>
 
+
+    <section id="planner" class="section shell planner-section">
+      <div class="heading"><div><span class="eyebrow">01 / SELECT</span><h2>选择想去的景点</h2></div><p>勾选后立即重算10天行程；不代替实时高铁订票或道路导航。</p></div>
+      <div class="planner-layout">
+        <div class="panel planner-controls">
+          <h3>快速方案</h3>
+          <div class="presets"><button class="button" type="button" data-preset="nature">江西自然优先</button><button class="button" type="button" data-preset="mixed">山西＋江西</button><button class="button" type="button" data-preset="datong">山西古迹＋自然</button><button class="button minimal" id="clearPicks" type="button">清空</button></div>
+          <label class="toggle-option"><input id="keepSkewer" type="checkbox"><span><b>保留太原沾串</b><small>单独勾选也会增加山西段和去程航班。</small></span></label>
+          <p class="planner-rule" id="poolDescription">路线和车次估算中。</p>
+        </div>
+        <div class="panel planner-result" aria-live="polite">
+          <div class="planner-metrics"><div><small>已选景点</small><b id="planPickCount">—</b></div><div><small>排入行程</small><b id="planScheduledCount">—</b></div><div><small>铁路/公路/航班耗时粗估</small><b id="planTravelHours">—</b></div></div>
+          <div class="plan-state"><b id="planStatus">计算中</b><a class="button primary" href="#schedule">查看生成的行程 ↓</a></div>
+          <div class="plan-warnings" id="planWarnings"></div>
+        </div>
+      </div>
+    </section>
+
+    <section id="places" class="section shell">
+      <div class="heading"><div><span class="eyebrow">02 / POOL</span><h2>景点池</h2></div><p>勾选景点即可自动重排行程。自然景观与交通信息按11月底至12月初的条件筛选；每个地点均保留实拍图。</p></div>
+      <div class="pool-toolbar"><label class="sr-text" for="poolFilter">筛选</label><select id="poolFilter" aria-label="按类型筛选景点"><option value="all">全部景点</option><option value="nature">自然与自然/人文</option><option value="jiangxi">江西</option><option value="shanxi">山西</option><option value="selected">仅看已选</option></select><label class="sr-text" for="poolSearch">搜索</label><input id="poolSearch" type="search" placeholder="搜索景点或地点" aria-label="搜索景点"><span id="poolMatch"></span></div>
+      <div class="places-layout" id="placeList"></div><p id="poolEmpty" class="fine" hidden>没有匹配的景点，可清空搜索或更换筛选条件。</p>
+      <p class="fine">图片均为历史资料，未必对应出行当天的季节。缩略图使用裁切排版；原图、作者及许可协议可通过照片来源访问。在线照片需要联网载入。</p>
+    </section>
+
+
     <section id="route" class="section shell">
-      <div class="heading"><div><span class="eyebrow">01 / ROUTE</span><h2>路线与交通</h2></div><p>城市间按铁路优先安排，只有去程从广州飞太原。山西到江西不乘飞机。</p></div>
+      <div class="heading"><div><span class="eyebrow">03 / ROUTE</span><h2>路线与交通</h2></div><p>根据已选景点自动调整是否进入山西；始终锁定12月5日回广州、12月6日回梧州。</p></div>
       <div class="panel route-panel">
-        <ol class="route-steps"><li><b>11/27</b><strong>梧州 → 广州</strong><small>动车，过夜</small></li><li><b>11/28—30</b><strong>太原 / 大同</strong><small>晋祠、云冈、悬空寺、木塔</small></li><li><b>12/01</b><strong>太原 → 上饶</strong><small>高铁长途转场</small></li><li><b>12/02—04</b><strong>婺源 / 三清山</strong><small>北线摄影、山地步行</small></li><li><b>12/05—06</b><strong>上饶 → 广州 → 梧州</strong><small>高铁和动车回程</small></li></ol>
-        <div class="route-note"><b>关键列车：G3127（参考）</b><span>太原南07:04 → 上饶15:38，约8小时34分钟。参考近期时刻，12月1日班次和余票仍需12306确认。11月30日晚必须回到太原。</span><a href="https://www.12306.cn/" target="_blank" rel="noopener noreferrer">12306查询 ↗</a></div>
+        <ol class="route-steps" id="routeSteps"></ol>
+        <div class="route-note" id="routeNote">正在根据景点计算路线…</div>
       </div>
     </section>
 
     <section id="schedule" class="section shell">
-      <div class="heading"><div><span class="eyebrow">02 / SCHEDULE</span><h2>每日安排</h2></div><p>点开日期查看时间、住宿、导航及该日相关景点的多张照片。交通尚未购票。</p></div>
+      <div class="heading"><div><span class="eyebrow">04 / SCHEDULE</span><h2>每日安排</h2></div><p>这里是实时按照勾选结果重新生成的日期安排；没排入的景点会在顶部显示原因。</p></div>
       <div class="day-filters" role="group" aria-label="筛选日程"><button class="chip selected" type="button" data-filter="all" aria-pressed="true">全部</button><button class="chip" type="button" data-filter="shanxi" aria-pressed="false">山西</button><button class="chip" type="button" data-filter="jiangxi" aria-pressed="false">江西</button><button class="chip" type="button" data-filter="transit" aria-pressed="false">交通日</button></div>
       <div id="dayList" class="day-list" aria-live="polite"></div>
     </section>
 
-    <section id="places" class="section shell">
-      <div class="heading"><div><span class="eyebrow">03 / PHOTOS</span><h2>景点照片</h2></div><p>主要景点每处展示3—4张不同实拍照片。点图查看大图，照片来源和授权可在每张图下打开核对。</p></div>
-      <div class="places-layout" id="placeList"></div>
-      <p class="fine">这些是既有景点实拍资料，不是本次出行当日的现场影像。缩略图使用裁切排版；原图、作者及许可协议可通过照片来源访问。在线照片需要联网载入。</p>
-    </section>
-
     <section id="food" class="section shell">
-      <div class="heading"><div><span class="eyebrow">04 / FOOD</span><h2>餐饮安排</h2></div><p>安排太原沾串和大同当地面食，不强行加入购物型餐饮线路。</p></div>
+      <div class="heading"><div><span class="eyebrow">05 / FOOD</span><h2>餐饮安排</h2></div><p>餐饮信息保留为参考；当前路线是否包含太原取决于上方选择。</p></div>
+      <p class="fine" id="foodNotice"></p>
       <div class="food-grid">
         <article class="panel food"><span class="mini">11月28日 · 18:00—19:30</span><h3>太原｜小溅沾串</h3><p>迎泽区开化寺街81号附近。原先查询的门店评分只是历史参考；营业情况和具体门牌需当天通过地图确认。</p><div class="food-foot"><span>备选：胖姐沾串</span><a href="https://uri.amap.com/search?keyword=%E5%B0%8F%E6%BA%85%E6%B2%BE%E4%B8%B2%20%E5%A4%AA%E5%8E%9F%20%E5%BC%80%E5%8C%96%E5%AF%BA%E8%A1%97" id="skewerMap" target="_blank" rel="noopener noreferrer">高德检索 ↗</a></div></article>
         <article class="panel food"><span class="mini">11月29日 · 大同晚餐</span><h3>大同｜烧麦、刀削面、羊杂</h3><p>优先选择古城附近就餐，试烧麦、浑源凉粉、羊杂。参考店：凤临阁、龙聚祥、任记七中刀削面。</p><div class="food-foot"><span>根据住处就近选择</span><a href="https://uri.amap.com/search?keyword=%E5%A4%A7%E5%90%8C%20%E7%83%A7%E9%BA%A6%20%E5%88%80%E5%89%8A%E9%9D%A2" target="_blank" rel="noopener noreferrer">高德检索 ↗</a></div></article>
@@ -72,22 +95,23 @@
     </section>
 
     <section id="budget" class="section shell">
-      <div class="heading"><div><span class="eyebrow">05 / BUDGET</span><h2>两人预算</h2></div><p>人民币规划区间，机票和高铁都未锁价。拖动滑块可查看不同档位预计总开支。</p></div>
+      <div class="heading"><div><span class="eyebrow">06 / BUDGET</span><h2>两人预算</h2></div><p>按实际排入的景点及路线重新估算两人费用；价格不是实时报价。</p></div>
       <div class="budget-layout"><div class="budget-total panel"><p>两人全程预计</p><output id="budgetValue">—</output><span id="budgetPerPerson">人均 —</span><label for="budgetRange">预算档位</label><input id="budgetRange" type="range" min="0" max="100" value="50" step="5"><div class="range-label"><span>节省</span><span>普通舒适</span><span>充裕</span></div><p class="budget-warn">目前只有计划参考价，没有任何已确认订单。实际两人开销会随航班价格、用车标准和住宿档次变化。</p></div><div id="budgetItems" class="panel budget-items"></div></div>
     </section>
 
     <section id="checklist" class="section shell">
-      <div class="heading"><div><span class="eyebrow">06 / CHECKLIST</span><h2>预订与核查</h2></div><p>清单和每日备注自动保存在当前浏览器，不会写入公开 GitHub 仓库。</p></div>
-      <div class="tasks-layout"><div class="panel tasks-panel"><div class="tasks-title"><b>待确认事项</b><span id="taskCounter">0 / 10</span></div><div class="progress"><div id="taskProgress"></div></div><div id="tasksList"></div></div><aside class="panel warnings"><h3>时间限制与注意事项</h3><p><b>11月30日：</b>两座古迹在大同周边，晚上还要赶回太原，必须按高铁时刻倒排包车。</p><p><b>12月1日：</b>太原到上饶的长途高铁是整条路线关键；放票后先确认这段。</p><p><b>12月3—4日：</b>石城晨雾、三清山云海都受天气影响，三清山索道也可能检修。</p><p><b>12月6日：</b>必须回到梧州，12月5日已预留广州过夜。</p></aside></div>
+      <div class="heading"><div><span class="eyebrow">07 / CHECKLIST</span><h2>预订与核查</h2></div><p>待办随选择变化。勾选状态和备注只在当前浏览器保存，不进入 GitHub。</p></div>
+      <div class="tasks-layout"><div class="panel tasks-panel"><div class="tasks-title"><b>待确认事项</b><span id="taskCounter">0 / 10</span></div><div class="progress"><div id="taskProgress"></div></div><div id="tasksList"></div></div><aside class="panel warnings"><h3>固定限制</h3><p><b>11月27日：</b>下班后可从梧州出发。</p><p><b>12月6日：</b>必须返回梧州，因此12月5日必须提前抵达广州。</p><p><b>途中：</b>不安排省际中途航班；山西与江西之间以铁路衔接。</p><p><b>注意：</b>排程按游览时间和交通方向计算，不含实时班次、堵车或封闭信息。</p></aside></div>
     </section>
 
     <section id="links" class="section shell link-section">
-      <div class="heading"><div><span class="eyebrow">07 / REFERENCES</span><h2>查询入口</h2></div><p>重新查时间和票价时，优先使用承运方及景区信息。</p></div>
+      <div class="heading"><div><span class="eyebrow">08 / REFERENCES</span><h2>查询入口</h2></div><p>重新查时间和票价时，优先使用承运方及景区信息。</p></div>
       <div class="reference-list" id="referenceList"></div>
     </section>
   </main>
-  <footer class="sitefooter"><div class="shell footer-flex"><p><strong>山西 / 江西 · 2026</strong><span>两人 · 梧州出发 · 11月27日至12月6日</span></p><div><span id="siteVersion">v2.0</span><button id="printPage" class="button minimal small" type="button">打印 / 保存PDF</button></div></div></footer>
+  <footer class="sitefooter"><div class="shell footer-flex"><p><strong>山西 / 江西 · 2026</strong><span>两人 · 梧州出发 · 11月27日至12月6日</span></p><div><span id="siteVersion">v3.0</span><button id="printPage" class="button minimal small" type="button">打印 / 保存PDF</button></div></div></footer>
   <dialog id="photoDialog" class="photo-dialog" aria-label="查看景点图片"><button type="button" class="close-dialog" id="closePhoto" aria-label="关闭照片">×</button><figure><img id="dialogImage" alt="" src="" referrerpolicy="no-referrer"><figcaption><b id="dialogTitle"></b><span id="dialogSource"></span><a id="dialogOriginal" href="#" target="_blank" rel="noopener noreferrer">图片来源与许可 ↗</a></figcaption></figure></dialog>
+  <div class="mobile-plan-bar" id="mobilePlannerBar"><span>已排 <b id="mobilePickCount">0/0</b> 处</span><a class="button primary" href="#schedule">查看行程</a></div>
   <div class="toast" id="toast" role="status" aria-live="polite"></div>
 </body>
 </html>
