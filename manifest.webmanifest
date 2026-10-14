@@ -1,0 +1,21 @@
+{
+  "id": "./",
+  "name": "山西 × 江西 · 2026双人旅行计划",
+  "short_name": "山西江西行程",
+  "description": "11月27日至12月6日，沾串、古建、陶艺、婺源红枫与三清山。",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#f6f3eb",
+  "theme_color": "#193a37",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./assets/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
