@@ -11,3 +11,6 @@
 @media print{.planner-controls,.mobile-plan-bar,.pool-toolbar,.pick-control,.plan-state a{display:none!important}.planner-layout{grid-template-columns:1fr}.place-card{break-inside:avoid}}
 /* 移动端勾选框必须在悬浮栏之上保持可点击。 */
 @media(max-width:760px){html{scroll-behavior:auto;scroll-padding-bottom:105px}.place-card{scroll-margin-bottom:105px}.pick-control{min-height:40px;position:relative;z-index:1;scroll-margin-bottom:105px}.pick-control input{width:19px;height:19px}.sitefooter{padding-bottom:110px}}
+
+/* 隐藏未经过城市的餐饮资料，避免纯江西路线误显示太原日期。 */
+[hidden]{display:none!important}

@@ -1,5 +1,5 @@
 /* 离线保存网页核心文件。景点实拍来自 Wikimedia Commons，不保证离线加载。 */
-const CACHE = 'shanxi-jiangxi-2026-v4';
+const CACHE = 'shanxi-jiangxi-2026-v5';
 const CORE = ['./','./index.html','./style.css','./app.js','./data.js','./planner_data.js','./planner.js','./manifest.webmanifest','./assets/icon.svg'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(CORE)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(names=>Promise.all(names.filter(n=>n.startsWith('shanxi-jiangxi-2026-')&&n!==CACHE).map(n=>caches.delete(n)))).then(()=>self.clients.claim())));

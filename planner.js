@@ -2,14 +2,16 @@
 // 规则式规划器：只使用公开路线的估算，不访问实时票务服务。
 const PLANNER_DATES=DAYS.map(d=>({date:d.date,w:d.w}));
 const Planner={
- selected:new Set(),skewer:false,filter:'all',query:'',result:null,
+ selected:new Set(),skewer:false,filter:'nature',query:'',result:null,
  init(){
-  const saved=readSaved('planner-selection-v3',null);
+  // v4 使用独立选择记录：首次升级默认改为自然景观，旧版个人备注/待办仍保留。
+  const saved=readSaved('planner-selection-v4',null);
   const initIds=saved?.ids?.filter(id=>POOL_INFO[id])||POOL_PRESETS.nature.ids;
   this.selected=new Set(initIds);
   this.skewer=saved?.skewer??POOL_PRESETS.nature.skewer;
   window.PLANNER_SELECTED=this.selected;
   $('#keepSkewer').checked=this.skewer;
+  $('#poolFilter').value=this.filter;
   $('#poolFilter').addEventListener('change',e=>{this.filter=e.target.value;this.applyFilter()});
   $('#poolSearch').addEventListener('input',e=>{this.query=e.target.value.trim();this.applyFilter()});
   $('#keepSkewer').addEventListener('change',e=>{this.skewer=e.target.checked;this.recalculate()});
@@ -19,7 +21,7 @@ const Planner={
   renderPlaces();this.applyFilter();this.recalculate();
  },
  pick(id,on){if(on)this.selected.add(id);else this.selected.delete(id);window.PLANNER_SELECTED=this.selected;this.syncChecks();this.recalculate()},
- preset(which){const p=POOL_PRESETS[which];if(!p)return;this.selected=new Set(p.ids);this.skewer=p.skewer;window.PLANNER_SELECTED=this.selected;$('#keepSkewer').checked=this.skewer;this.filter='all';this.query='';$('#poolFilter').value='all';$('#poolSearch').value='';this.syncChecks();this.applyFilter();this.recalculate()},
+ preset(which){const p=POOL_PRESETS[which];if(!p)return;this.selected=new Set(p.ids);this.skewer=p.skewer;window.PLANNER_SELECTED=this.selected;$('#keepSkewer').checked=this.skewer;this.filter=which==='nature'?'nature':'all';this.query='';$('#poolFilter').value=this.filter;$('#poolSearch').value='';this.syncChecks();this.applyFilter();this.recalculate()},
  syncChecks(){$$('[data-pick]').forEach(el=>{el.checked=this.selected.has(el.dataset.pick);el.closest('.place-card')?.classList.toggle('is-picked',el.checked)});},
  applyFilter(){let shown=0;$$('.place-card').forEach(el=>{
    const info=POOL_INFO[el.dataset.id],s=SPOT_BY_ID[el.dataset.id];
@@ -28,7 +30,7 @@ const Planner={
   });$('#poolEmpty').hidden=shown!==0;$('#poolMatch').textContent=`当前显示 ${shown} / ${SPOTS.length} 处`;
  },
  recalculate(){
-  save('planner-selection-v3',{ids:[...this.selected],skewer:this.skewer});
+  save('planner-selection-v4',{ids:[...this.selected],skewer:this.skewer});
   const result=computePlanner(this.selected,this.skewer);
   this.result=result;window.ACTIVE_PLAN=result;
   activeDays=result.days;activeBudget=result.budget;activeTasks=result.tasks;
@@ -40,7 +42,9 @@ const label=id=>SPOT_BY_ID[id]?.name||id;
 function emptyDay(index){return {date:PLANNER_DATES[index].date,w:PLANNER_DATES[index].w,region:'transit',place:'机动',title:'预留时间',sub:'根据天气和交通调整',night:'待定',featured:[],note:'该日期尚未安排景点。可以选择更多景点，也可以保留休息或天气缓冲。',events:[]}}
 function addSpot(day,id,time,detail){day.featured.push(id);day.events.push([time,label(id),detail||SPOT_BY_ID[id].description,SPOT_BY_ID[id].search]);}
 function computePlanner(selected,skewer){
- const ids=new Set(selected),north=[...ids].some(id=>SPOT_BY_ID[id]?.province.startsWith('山西'))||skewer, south=[...ids].some(id=>SPOT_BY_ID[id]?.province.startsWith('江西'));
+ // 只有真正勾选山西景点才前往山西；沾串绝不驱动绕路、乘机或额外住宿。
+ const ids=new Set(selected),north=[...ids].some(id=>SPOT_BY_ID[id]?.province.startsWith('山西')), south=[...ids].some(id=>SPOT_BY_ID[id]?.province.startsWith('江西'));
+ const enRouteSkewer=Boolean(skewer&&north);
  const placed=new Set(),warnings=[],days=Array.from({length:10},(_,i)=>emptyDay(i));let hours=0;
  const assign=(d,id,time,detail)=>{addSpot(days[d],id,time,detail);placed.add(id)};
  const setup=(i,region,place,title,sub,night,note='',events=[])=>Object.assign(days[i],{region,place,title,sub,night,note,events,featured:[]});
@@ -50,7 +54,7 @@ function computePlanner(selected,skewer){
  if(north){
   setup(1,'shanxi','太原','广州 → 太原','上午航班，仅去程乘机','太原市区','去程两张机票和起降时刻尚未确认；若下午才落地，应舍弃较远的景点。',[['上午','广州白云 → 太原武宿（待订）','优先当天上午抵达的直飞，航班与票价需另行查实。','太原武宿国际机场']]);hours+=3;
   if(ids.has('jinci'))assign(1,'jinci','下午13:30—16:30','从机场到晋祠需另计市内交通；若航班晚点，优先取消此项。');
-  if(skewer)days[1].events.push(['18:00—19:30','小溅沾串（待核实营业）','太原迎泽区开化寺街。可自行更换店铺，不影响后续排程。','小溅沾串 太原']);
+  if(enRouteSkewer)days[1].events.push(['18:00—19:30','小溅沾串（待核实营业）','太原迎泽区开化寺街。可自行更换店铺，不影响后续排程。','小溅沾串 太原']);
   const datongIds=['yungang','datong'].filter(id=>ids.has(id));
   const ruralIds=['hanging','hengshan','pagoda'].filter(id=>ids.has(id));
   const useDatong=datongIds.length+ruralIds.length>0;
@@ -84,16 +88,37 @@ function computePlanner(selected,skewer){
    transit(4,'太原','山西自由日','自然景观或休息','太原市区','未选江西景点。若保留山西游玩，12月5日仍需预留整天铁路返广州。',[]);
   }
  }else if(south){
-  transit(1,'上饶','广州 → 上饶','直接乘高铁赴江西，不乘飞机','上饶市区','具体高铁车次、所需时间与是否换乘待12306开售再核实。',[['上午—下午','广州（南/东）→ 上饶（参考）','预估5—7小时，不代表存在该时段固定直达班次。','上饶站']]);hours+=6;
+  if(ids.has('wugong')){
+   transit(1,'萍乡','广州 → 萍乡北','高铁进入江西，不安排航班','萍乡或武功山山脚','广州南到萍乡北近期有约3—4小时高铁参考班次，正式运行、余票待12306核实。萍乡北至景区另约80分钟（历史班车参考）。',[['上午—下午','广州南 → 萍乡北','高铁参考约3—4小时，需以出游日期开行计划为准。','萍乡北站'],['抵达后','萍乡北 → 景区附近','旅游专线发车时间、换乘与末班车待核实。','萍乡武功山游客服务中心']]);hours+=4.8;
+  }else{
+   const nearShangrao=['shicheng','jujing','huangling','sanqing'].some(id=>ids.has(id));
+   const entry=nearShangrao?['上饶','上饶站',6]:ids.has('guifeng')?['弋阳','弋阳站',5.5]:ids.has('longhu')?['鹰潭','鹰潭北站',5.6]:ids.has('wucheng')?['南昌','南昌西站',4.6]:['上饶','上饶站',6];
+   transit(1,entry[0],`广州 → ${entry[0]}`,'高铁进入江西，不乘飞机',entry[0]+'市区','系统只选最近的铁路进入片区；换乘及时间为粗估，出行日期开行和余票以12306为准。',[['上午—下午',`广州 → ${entry[1]}（待核实）`,'所列站点是建议交通方向，并不代表有已确认的直达班次。',entry[1]]]);hours+=entry[2];
+  }
  }else{
   transit(1,'广州','广州机动','尚未勾选目的地','广州','没有选择景点，不会自动购票或安排跨省行程。',[]);
  }
- // 只要选择江西，就按照地理方向把婺源、三清山、弋阳、鹰潭、鄱阳湖依次安排。
- const restDays=north?[5,6,7]:[2,3,4,5,6,7];let cursor=0,from='上饶';
+ // 按交通方向安排：广州→萍乡武功山（可选）→上饶/三清山→弋阳→鹰潭→南昌（可选），避免为吃沾串绕行山西。
+ const restDays=north?[5,6,7]:[2,3,4,5,6,7];let cursor=0,from=days[1].place==='萍乡'?'pingxiang':days[1].place==='南昌'?'nanchang':days[1].place==='弋阳'?'yiyang':days[1].place==='鹰潭'?'yingtan':'shangrao';
  const reserve=(count)=>cursor+count<=restDays.length;
  const current=()=>restDays[cursor];
  const take=()=>restDays[cursor++];
  const has=id=>ids.has(id);
+ // 武功山在江西西部，只有纯江西行程适合排在最前；从山西转上饶后再折回萍乡会浪费时间。
+ if(south&&has('wugong')&&!north&&reserve(2)){
+  const summit=take();
+  setup(summit,'jiangxi','萍乡 / 武功山','武功山','金色高山草甸、山脊','萍乡或武功山山脚','高山低温、结冰、索道停运会影响游览，必须以景区开放信息决定徒步路线。',[['上午','萍乡/山脚 → 武功山景区','按当日景区专线或合规接驳前往游客中心，山路和索道时间未锁定。','武功山游客服务中心']]);
+  assign(summit,'wugong','09:30—16:00','利用开放的索道及步道游览金顶、草甸等；遇大风结冰需调整。');hours+=1.5;
+  const eastMajor=['shicheng','jujing','huangling','sanqing','guifeng','longhu'].some(has);
+  const east=eastMajor||has('wucheng');
+  const transfer=take();
+  if(east){
+   const next=eastMajor?'上饶':'南昌',station=eastMajor?'上饶站':'南昌西站';
+   transit(transfer,next,`萍乡 → ${next}`,'高铁东行或北上，不折返广州',next+'市区','参考行程约3小时，具体车次与是否换乘须由12306确认。',[['上午—下午',`萍乡北 → ${station}`,'换乘站、车次与接驳均为待确认项目，下午可休息。',station]]);hours+=eastMajor?3.4:2.8;from=eastMajor?'shangrao':'nanchang';
+  }else{
+   setup(transfer,'jiangxi','萍乡','天气机动 / 休息','按天气补拍或在市区休息','萍乡','武功山如果索道/山路不开放，可保留缓冲；当天不安排无必要的跨市转场。',[]);from='pingxiang';
+  }
+ }
  const hasWuyuan=['shicheng','jujing','huangling'].some(has);
  if(south&&hasWuyuan){
   if(has('shicheng')){
@@ -134,41 +159,44 @@ function computePlanner(selected,skewer){
  }
  if(south&&has('wucheng')&&!placed.has('wucheng')){
   if(reserve(2)){
-   const n=take(),next=take();setup(n,'jiangxi','南昌 / 永修','转场至吴城','高铁＋城市公交/包车','永修 / 南昌','吴城不在上饶—婺源—三清山短线内，需绕行南昌、永修。',[['白天','前往南昌/永修','从上饶或鹰潭沿铁路前往南昌后转永修、吴城。','永修站'],['傍晚','入住并确认观鸟点','提前核实次晨鸟群位置，避免惊扰野生动物。','吴城候鸟小镇']]);hours+=4.0;
+   const n=take(),next=take();setup(n,'jiangxi','南昌 / 永修','转场至吴城','高铁＋城市公交/包车','永修 / 南昌','吴城不在上饶—婺源—三清山短线内，需绕行南昌、永修。',[['白天','前往南昌/永修','根据前一站从上饶、鹰潭或南昌换乘至永修、吴城；出发前核实班车。','永修站'],['傍晚','入住并确认观鸟点','提前核实次晨鸟群位置，避免惊扰野生动物。','吴城候鸟小镇']]);hours+=4.0;
    setup(next,'jiangxi','吴城','鄱阳湖候鸟湿地','清晨观鸟','南昌 / 永修','鸟群位置随水位变化，观鸟需使用安全开放区域。',[]);assign(next,'wucheng','06:30—13:00','到大湖池等允许进入的观鸟点，建议携带长焦和防风衣。');hours+=2.0;from='wucheng';
   }
  }
  // 可用空白天保留天气缓冲，而不是强制塞满。
  for(const n of restDays){if(south&&days[n].title==='预留时间'){
-  setup(n,'jiangxi',from==='wucheng'?'南昌':from==='yingtan'?'鹰潭':from==='yiyang'?'弋阳':from==='wuyuan'?'婺源':'上饶','天气机动 / 休息','自由活动或补拍',from==='wucheng'?'南昌':from==='yingtan'?'鹰潭':'上饶','可以保留这一天等天气，或再从景点池选择适合的地方。',[]);
+  setup(n,'jiangxi',from==='wucheng'?'南昌':from==='nanchang'?'南昌':from==='yingtan'?'鹰潭':from==='yiyang'?'弋阳':from==='wuyuan'?'婺源':from==='pingxiang'?'萍乡':'上饶','天气机动 / 休息','自由活动或补拍',from==='wucheng'?'南昌':from==='nanchang'?'南昌':from==='yingtan'?'鹰潭':from==='pingxiang'?'萍乡':'上饶','可以保留这一天等天气，或再从景点池选择适合的地方。',[]);
  }}
- const toGuangzhou=!north&&!south?'广州':north&&!south?'太原':from==='wucheng'?'南昌西':from==='yingtan'?'鹰潭北':from==='yiyang'?'弋阳/上饶':'上饶';
- transit(8,'广州',!north&&!south?'广州交通备用日':`${toGuangzhou} → 广州`,'高铁 / 动车，不安排中途航班','广州南站附近','请核对真实直达/中转时刻，建议12月5日就抵达广州。',[['上午—下午',`${toGuangzhou} → 广州南（待确认）`,'以12306实际车次为准；路程时间随出发站和换乘而变化。','广州南站']]);hours+=north&&!south?10:from==='wucheng'?4.3:from==='yingtan'?5.8:5.5;
+ const toGuangzhou=!north&&!south?'广州':north&&!south?'太原':from==='wucheng'?'南昌西':from==='nanchang'?'南昌西':from==='yingtan'?'鹰潭北':from==='yiyang'?'弋阳/上饶':from==='pingxiang'?'萍乡北':'上饶';
+ transit(8,'广州',!north&&!south?'广州交通备用日':`${toGuangzhou} → 广州`,'高铁 / 动车，不安排中途航班','广州南站附近','请核对真实直达/中转时刻，建议12月5日就抵达广州。',[['上午—下午',`${toGuangzhou} → 广州南（待确认）`,'以12306实际车次为准；路程时间随出发站和换乘而变化。','广州南站']]);hours+=north&&!south?10:from==='wucheng'||from==='nanchang'?4.3:from==='yingtan'?5.8:from==='pingxiang'?3.5:5.5;
  transit(9,'梧州','广州 → 梧州','12月6日必须返回梧州','梧州（返家）','建议选择白天动车，不把返程风险压在末班车上。',[['白天','广州南 → 梧州南','正式车次以12306为准。','梧州南站']]);hours+=1.6;
  const missing=[...ids].filter(id=>!placed.has(id));
- if(!ids.size&&!skewer)warnings.push('尚未选景点：行程只包含基本交通日和空白机动日。');
+ if(!ids.size)warnings.push('尚未选景点：行程只包含基本交通日和空白机动日。');
+ if(skewer&&!north)warnings.push('沾串仅顺路安排：当前未选择太原/山西景点，不会为吃沾串增加省份、航班或住宿。');
  if(missing.length)warnings.push(`未排入 ${missing.length} 处：${missing.map(label).join('、')}。当前日期或相邻交通时间不足；请取消其他景点，或选择更集中的区域。`);
  if(north&&south)warnings.push('山西与江西同时保留时，12月1日须整天跨省乘高铁，江西实际只有12月2—4日三个游览日。');
+ if(north&&ids.has('wugong'))warnings.push('武功山位于江西西部，而山西跨省高铁先抵上饶：本次不倒走萍乡；建议选择纯江西自然路线。');
  if(ids.has('hengshan'))warnings.push('恒山冬季开放与结冰风险需要临行确认，网页不能实时判定登山是否安全。');
  if(ids.has('wucheng')&&!placed.has('wucheng'))warnings.push('鄱阳湖吴城需预留两日，山西＋江西紧凑版通常容纳不下；更推荐单独选择江西自然线。');
- if(!north&&south)warnings.push('自然景观优先路线已自动取消山西去程航班；计划从广州乘铁路进入江西。');
+ // 江西单省默认采用铁路，不再为省份与沾串决策生成无必要的提示。
  const unique=[...new Set(missing)].sort();
  const budget=buildEstimate(north,south,placed);
  const tasks=buildTasks(north,south,placed,days);
  const selectedCount=ids.size;
  const visited=placed.size;
- return {north,south,days,visited,selectedCount,assigned:placed,unplaced:unique,warnings,hours:Math.round(hours),budget,tasks,skewer};
+ return {north,south,days,visited,selectedCount,assigned:placed,unplaced:unique,warnings,hours:Math.round(hours),budget,tasks,skewer:enRouteSkewer,skewerRequested:Boolean(skewer)};
 }
 function buildEstimate(north,south,selected){const result=[];const add=(t,l,h)=>result.push([t,l,h]);
  add('往返梧州—广州动车及接驳',350,750);
  if(north){add('广州→太原两人机票',1200,3300);add('太原与大同铁路/接驳',350,850)}
  if(north&&south)add('太原南→上饶两人高铁',1400,1700);
- if(!north&&south)add('广州→江西两人高铁',1000,1700);
+ if(!north&&south)add('广州→江西两人高铁',selected.has('wugong')?650:1000,selected.has('wugong')?1200:1700);
  add(north&&!south?'太原→广州两人铁路':south?'江西→广州两人高铁':'广州当地交通',north&&!south?1500:south?1100:200,north&&!south?2700:south?1700:400);
  let local=selected.has('shicheng')?550:200;
  if(selected.has('wucheng'))local+=700;
  if(selected.has('hanging')||selected.has('hengshan')||selected.has('pagoda'))local+=550;
  if(selected.has('sanqing'))local+=300;
+ if(selected.has('wugong'))local+=300;
  if(selected.has('huangling'))local+=250;
  if(selected.has('longhu'))local+=180;
  if(selected.has('guifeng'))local+=160;
@@ -181,7 +209,8 @@ function buildTasks(north,south,placed,days){const out=[['11/27 梧州→广州�
  if(north)out.push(['11/28 广州→太原去程航班','两人经济舱，指定日期票价、时刻、行李额待核实']);
  if(north&&(placed.has('yungang')||placed.has('hanging')||placed.has('hengshan')||placed.has('pagoda')))out.push(['大同/浑源用车和高铁','核对大同往返太原的高铁、冬季道路与纯玩车辆']);
  if(north&&south)out.push(['12/1 太原南→上饶','G3127参考07:04—15:38，实际是否开行及两张票待核实']);
- if(!north&&south)out.push(['11/28 广州→江西铁路','按选定出发站重新查12306']);
+ if(!north&&south)out.push(['11/28 广州→江西铁路',placed.has('wugong')?'优先查询广州南→萍乡北高铁，再预订武功山景区接驳':'按选定出发站重新查12306']);
+ if(placed.has('wugong'))out.push(['武功山接驳与天气','核实萍乡北旅游专线、景区索道、登山步道及山顶风力/结冰情况']);
  if(placed.has('shicheng'))out.push(['婺源石城住宿与接驳','确认暖气、热水、包车费用及清晨步行距离']);
  if(placed.has('sanqing'))out.push(['三清山索道与天气','确认运营入口、山上气温以及替代线路']);
  if(placed.has('wucheng'))out.push(['吴城湿地观鸟','核对水位、可进入观鸟点及南昌/永修接驳']);
@@ -190,25 +219,28 @@ function buildTasks(north,south,placed,days){const out=[['11/27 梧州→广州�
  return out;
 }
 function renderPlannerSummary(plan){
- const total=plan.selectedCount,done=plan.visited;$('#planPickCount').textContent=total+(plan.skewer?' ＋沾串':'');$('#planScheduledCount').textContent=done+' / '+total;
+ const total=plan.selectedCount,done=plan.visited;$('#planPickCount').textContent=String(total)+(plan.skewer?' ＋顺路沾串':plan.skewerRequested?'（沾串不绕路）':'');$('#planScheduledCount').textContent=done+' / '+total;
  $('#planTravelHours').textContent='约 '+Math.max(plan.hours-3,0)+'—'+(plan.hours+5)+' 小时';
  $('#planStatus').textContent=plan.unplaced.length?`未排入 ${plan.unplaced.length} 处`:'已按日期排入';
  $('#planStatus').classList.toggle('needs-review',plan.unplaced.length>0);
  const warnings=plan.warnings.slice();$('#planWarnings').innerHTML=warnings.length?warnings.map(s=>`<p>${esc(s)}</p>`).join(''):'<p>已安排全部勾选景点。车次、门票及交通耗时仍需在正式出票时确认。</p>';
  $('#mobilePickCount').textContent=done+'/'+total;
- $('#poolDescription').textContent=plan.north?'当前涉及山西；如取消山西景点和沾串，网页会自动改为江西铁路自然线。':'当前仅江西景点；不安排广州→太原去程航班。';
- $('#foodNotice').textContent=plan.north?'太原沾串为可选项，实际营业情况需核对。':'当前未选择山西。以下太原餐饮信息仅供以后加入山西时参考。';
- $('#factRouteMode').textContent=plan.north?'广州飞太原，途中不飞行':'广州乘铁路赴江西';
+ $('#poolDescription').textContent=plan.north?'已选择山西景点，按条件安排太原入程；沾串只在太原时可选。':'默认走江西铁路自然线；即使选中沾串也不因此增加山西行程。';
+ const datongVisited=plan.days.some(d=>d.region==='shanxi'&&d.place.includes('大同'));
+ $('#skewerCard').hidden=!plan.skewer;$('#datongFoodCard').hidden=!datongVisited;$('#foodGrid').hidden=!plan.skewer&&!datongVisited;
+ $('#foodNotice').textContent=plan.skewer?'已到太原，可顺路安排沾串；营业时间须核实。':plan.north?'太原沾串不是固定目的，想顺路品尝可打开上方选项。':'当前为江西自然路线，不经过太原；无需为沾串增加行程。沿途就近选择当地餐饮。';
+ $('#factRouteMode').textContent=plan.north?'含山西：广州飞太原，后续铁路':'江西自然：全程铁路/公路';
  $('#factSelected').textContent=plan.visited+' / '+plan.selectedCount+' 处已排入';
  $('#factNature').textContent=[...plan.assigned].filter(id=>POOL_INFO[id]?.kind==='nature'||POOL_INFO[id]?.kind==='both').length+' 处自然/混合景点';
 }
 function renderRoute(plan){
- const blocks=[['11/27','梧州 → 广州','晚间动车'],[plan.north?'11/28—30':'11/28',plan.north?'太原 / 大同':'广州 → 上饶',plan.north?'去程航班＋当地铁路':'高铁进入江西']];
+ const entry=plan.days[1]?.title||'广州 → 江西';
+ const blocks=[['11/27','梧州 → 广州','晚间动车'],[plan.north?'11/28—30':'11/28',plan.north?'太原 / 大同':entry,plan.north?'去程航班＋当地铁路':'高铁进入江西']];
  if(plan.north&&plan.south)blocks.push(['12/01','太原 → 上饶','整天高铁转场']);
  const scenicDates=plan.north?['12/02—04']:['11/29—12/04'];
  const name=plan.south?[...plan.assigned].filter(id=>SPOT_BY_ID[id].province.startsWith('江西')).map(label).join('、')||'江西机动':'山西机动';
  blocks.push([scenicDates[0],name||'自由活动','按勾选自动计算'],['12/05','→ 广州','乘铁路返回'],['12/06','广州 → 梧州','当日到家']);
  $('#routeSteps').innerHTML=blocks.map(b=>`<li><b>${esc(b[0])}</b><strong>${esc(b[1])}</strong><small>${esc(b[2])}</small></li>`).join('');
- $('#routeNote').innerHTML=plan.north&&plan.south?`<b>跨省铁路（参考）</b><span>G3127 太原南 07:04 → 上饶 15:38，约8小时34分。12月1日是否有票、是否按此时刻运行均未确认。</span><a href="https://www.12306.cn/" target="_blank" rel="noopener noreferrer">12306 ↗</a>`:`<b>铁路优先</b><span>${plan.north?'12月5日须查太原至广州当天可到达的高铁／换乘方案。':'11月28日从广州进入江西、12月5日返回广州；选择的景点决定换乘站与耗时。'}所有时刻均需届时在12306复核。</span><a href="https://www.12306.cn/" target="_blank" rel="noopener noreferrer">12306 ↗</a>`;
+ $('#routeNote').innerHTML=plan.north&&plan.south?`<b>跨省铁路（参考）</b><span>G3127 太原南 07:04 → 上饶 15:38，约8小时34分。12月1日是否有票、是否按此时刻运行均未确认。</span><a href="https://www.12306.cn/" target="_blank" rel="noopener noreferrer">12306 ↗</a>`:`<b>铁路优先</b><span>${plan.north?'12月5日须查太原至广州当天可到达的高铁／换乘方案。':'11月28日从广州进入江西（根据已选景点选择萍乡、上饶、弋阳、鹰潭或南昌），12月5日返回广州；具体车次按选定站点复核。'}所有时刻均需届时在12306复核。</span><a href="https://www.12306.cn/" target="_blank" rel="noopener noreferrer">12306 ↗</a>`;
 }
 window.addEventListener('DOMContentLoaded',()=>Planner.init());

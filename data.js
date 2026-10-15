@@ -1,12 +1,12 @@
 'use strict';
 // 每次改行程，修改 DAYS / SPOTS / TASKS。图片来自 Wikimedia Commons，均保留作者及许可链接。
 const TRIP_META = {
-  title:'山西 / 江西旅行计划',
+  title:'江西自然风景旅行计划',
   people:2,
   start:'2026-11-27', end:'2026-12-06',
   origin:'广西梧州',
   route:['梧州','广州','太原','大同','太原','上饶','婺源石城','三清山','上饶','广州','梧州'],
-  version:'2.0 · 2026-10-14'
+  version:'4.0 · 2026-10-15'
 };
 const DAYS = [
  {date:'2026-11-27',w:'周五',region:'transit',place:'广州',title:'梧州 → 广州',sub:'下班后出发',night:'广州白云机场附近',featured:[],
